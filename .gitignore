@@ -3,8 +3,9 @@
 *.sqlite
 *.sqlite3
 
-# Storage directory for uploaded files
-storage/
+# Storage directory for uploaded files (but keep .gitkeep)
+storage/*
+!storage/.gitkeep
 
 # PHP error logs
 php_errors.log

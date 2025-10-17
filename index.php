@@ -1,6 +1,27 @@
 <?php
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/db.php';
+
 $csrf = csrf_token();
+
+// Get list of uploaded files for display
+$pdo = db();
+$stmt = $pdo->prepare("SELECT id, orig_name, size, downloads, max_downloads, expires_at, created_at 
+                       FROM files 
+                       ORDER BY created_at DESC 
+                       LIMIT 50");
+$stmt->execute();
+$uploadedFiles = $stmt->fetchAll();
+
+function human_size(int $bytes): string {
+    if ($bytes <= 0) return '0 B';
+    $units = ['B','KB','MB','GB','TB','PB'];
+    $pow = (int) floor(log($bytes, 1024));
+    $pow = max(0, min($pow, count($units) - 1));
+    $value = $bytes / (1024 ** $pow);
+    $precision = ($value < 10 && $pow > 0) ? 1 : 0;
+    return number_format($value, $precision) . ' ' . $units[$pow];
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -166,9 +187,9 @@ $csrf = csrf_token();
     <a href="https://your-ad-link.example/top" target="_blank" rel="noopener">
       <picture>
         <!-- ছোট স্ক্রিন হলে 320×100 -->
-        <source media="(max-width: 640px)" srcset="ads/top_320x100.jpg">
+        <source media="(max-width: 640px)" srcset="ads/top_320x100.svg">
         <!-- ডিফল্ট 728×90 -->
-        <img src="ads/top_728x90.jpg" alt="Top Banner Ad">
+        <img src="ads/top_728x90.svg" alt="Top Banner Ad">
       </picture>
     </a>
   </div>
@@ -217,6 +238,61 @@ $csrf = csrf_token();
 
         <div class="footer">Download link is public.</div>
       </div>
+
+      <!-- ===== Uploaded Files List ===== -->
+      <?php if (!empty($uploadedFiles)): ?>
+      <div class="panel" style="margin-top: 24px;">
+        <h2 class="title" style="font-size: 20px; margin-bottom: 18px;">Recently Uploaded Files</h2>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--border); text-align: left;">
+                <th style="padding: 10px; color: var(--muted); font-size: 12px; text-transform: uppercase;">File Name</th>
+                <th style="padding: 10px; color: var(--muted); font-size: 12px; text-transform: uppercase;">Size</th>
+                <th style="padding: 10px; color: var(--muted); font-size: 12px; text-transform: uppercase;">Downloads</th>
+                <th style="padding: 10px; color: var(--muted); font-size: 12px; text-transform: uppercase;">Created</th>
+                <th style="padding: 10px; color: var(--muted); font-size: 12px; text-transform: uppercase;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($uploadedFiles as $file): 
+                $fileLink = 'dl.php?id=' . $file['id'];
+                $isExpired = ($file['expires_at'] !== null && new DateTime($file['expires_at']) < new DateTime());
+                $isLimited = ($file['max_downloads'] !== null && (int)$file['downloads'] >= (int)$file['max_downloads']);
+                $canDownload = !$isExpired && !$isLimited;
+              ?>
+              <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 12px; color: var(--text); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?= h($file['orig_name']) ?>">
+                  <?= h($file['orig_name']) ?>
+                </td>
+                <td style="padding: 12px; color: var(--text);">
+                  <?= human_size((int)$file['size']) ?>
+                </td>
+                <td style="padding: 12px; color: var(--text);">
+                  <?= (int)$file['downloads'] ?><?= $file['max_downloads'] ? ' / ' . (int)$file['max_downloads'] : '' ?>
+                </td>
+                <td style="padding: 12px; color: var(--text); font-size: 13px;">
+                  <?= date('M d, Y', strtotime($file['created_at'])) ?>
+                </td>
+                <td style="padding: 12px;">
+                  <?php if ($canDownload): ?>
+                    <a href="<?= h($fileLink) ?>" class="btn" style="padding: 8px 16px; font-size: 14px; text-decoration: none; display: inline-block;">
+                      Download
+                    </a>
+                  <?php else: ?>
+                    <span style="color: var(--muted); font-size: 13px;"><?= $isExpired ? 'Expired' : 'Limit reached' ?></span>
+                  <?php endif; ?>
+                </td>
+              </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top: 16px; text-align: center;">
+          <a href="admin.php" class="btn btn-outline" style="text-decoration: none; display: inline-block;">View All in Admin Panel</a>
+        </div>
+      </div>
+      <?php endif; ?>
     </div>
 
     <!-- Right: sticky Image Ad -->
@@ -226,9 +302,9 @@ $csrf = csrf_token();
           <a href="https://your-ad-link.example/right" target="_blank" rel="noopener">
             <picture>
               <!-- মোবাইলে 300×250 -->
-              <source media="(max-width: 992px)" srcset="ads/right_300x250.jpg">
+              <source media="(max-width: 992px)" srcset="ads/right_300x250.svg">
               <!-- ডিফল্ট 300×600 -->
-              <img src="ads/right_300x600.jpg" alt="Right Sidebar Ad">
+              <img src="ads/right_300x600.svg" alt="Right Sidebar Ad">
             </picture>
           </a>
         </div>
