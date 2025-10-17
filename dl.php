@@ -13,7 +13,9 @@ function human_size(int $bytes, int $decimals = 1): string {
     return number_format($value, $precision) . ' ' . $units[$pow];
 }
 
-function time_left_str(DateTime $now, DateTime $expires): string {
+function time_left_str(?DateTime $expires): string {
+    if ($expires === null) return 'Never expires';
+    $now = new DateTime();
     if ($expires <= $now) return 'Expired';
     $diff = $now->diff($expires);
     $parts = [];
@@ -42,10 +44,13 @@ $expired = false;
 $limitReached = false;
 
 if (empty($errorMsg)) {
-    $expires = new DateTime($file['expires_at']);
-    if ($now > $expires) {
-        $expired = true;
-        $errorMsg = 'This link has expired.';
+    // Check expiration only if expires_at is set
+    if ($file['expires_at'] !== null) {
+        $expires = new DateTime($file['expires_at']);
+        if ($now > $expires) {
+            $expired = true;
+            $errorMsg = 'This link has expired.';
+        }
     }
     if (!$expired && $file['max_downloads'] !== null && (int)$file['downloads'] >= (int)$file['max_downloads']) {
         $limitReached = true;
@@ -221,13 +226,13 @@ if (!empty($file) && $file['max_downloads'] !== null) {
             <div class="file-icon"><?= strtoupper(substr((string)$file['orig_name'], -3)) ?></div>
             <div>
               <h1 class="file-title"><?= h($file['orig_name']) ?></h1>
-              <div class="muted">Private download link • Generated for sharing</div>
+              <div class="muted">Public download link • Generated for sharing</div>
             </div>
           </div>
 
           <?php
-            $expiresAtStr = h($file['expires_at']);
-            $leftStr = time_left_str($now, new DateTime($file['expires_at']));
+            $expiresAtStr = $file['expires_at'] ? h($file['expires_at']) : 'Never';
+            $leftStr = time_left_str($file['expires_at'] ? new DateTime($file['expires_at']) : null);
             $downloadsStr = (int)$file['downloads'];
             $maxStr = $file['max_downloads'] ? '/ ' . (int)$file['max_downloads'] : '';
             $remainStr = ($remaining !== null) ? " ({$remaining} left)" : '';

@@ -16,8 +16,11 @@ $file = $stmt->fetch();
 if (!$file) exit('Invalid link');
 
 $now     = new DateTime();
-$expires = new DateTime($file['expires_at']);
-if ($now > $expires) exit('Expired');
+// Check expiration only if expires_at is set
+if ($file['expires_at'] !== null) {
+    $expires = new DateTime($file['expires_at']);
+    if ($now > $expires) exit('Expired');
+}
 
 if ($file['max_downloads'] !== null && (int)$file['downloads'] >= (int)$file['max_downloads']) {
     exit('Download limit reached');

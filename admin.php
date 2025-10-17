@@ -1,5 +1,5 @@
 <?php
-// admin.php — simple admin dashboard for viewing the `files` table (MIME removed) — Light *Gray* Theme
+// admin.php — Admin dashboard with proper username/password authentication
 declare(strict_types=1);
 
 session_start();
@@ -7,17 +7,41 @@ session_start();
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/db.php';
 
-/* ========= SIMPLE AUTH (change the key!) ========= */
-$ADMIN_KEY = getenv('ADMIN_KEY') ?: 'change-me-123'; // <-- change this!
+/* ========= AUTHENTICATION ========= */
+$pdo = db();
 
-// Login via GET key (e.g., admin.php?key=XYZ)
-if (isset($_GET['key']) && is_string($_GET['key']) && hash_equals($ADMIN_KEY, $_GET['key'])) {
-    $_SESSION['admin_ok'] = true;
+// Handle logout
+if (isset($_GET['logout'])) {
+    unset($_SESSION['admin_user_id']);
+    unset($_SESSION['admin_username']);
+    header('Location: admin.php');
+    exit;
 }
 
-// If not logged in, show a tiny lock screen (LIGHT GRAY)
-if (empty($_SESSION['admin_ok'])) {
-    http_response_code(401);
+// Handle login form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
+    $username = trim((string)($_POST['username'] ?? ''));
+    $password = (string)($_POST['password'] ?? '');
+    
+    $stmt = $pdo->prepare("SELECT id, username, password_hash, is_admin FROM users WHERE username = :username AND is_admin = 1 LIMIT 1");
+    $stmt->execute([':username' => $username]);
+    $user = $stmt->fetch();
+    
+    if ($user && password_verify($password, $user['password_hash'])) {
+        $_SESSION['admin_user_id'] = $user['id'];
+        $_SESSION['admin_username'] = $user['username'];
+        header('Location: admin.php');
+        exit;
+    } else {
+        $loginError = 'Invalid username or password';
+    }
+}
+
+// Check if logged in
+$isLoggedIn = !empty($_SESSION['admin_user_id']);
+
+// If not logged in, show login form
+if (!$isLoggedIn) {
     ?>
     <!doctype html>
     <html lang="en">
@@ -25,33 +49,43 @@ if (empty($_SESSION['admin_ok'])) {
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       <title>Admin Login</title>
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
       <style>
         :root{
-          --bg:#f3f4f6;      /* light gray background */
-          --card:#f9fafb;    /* soft gray card */
+          --bg:#f3f4f6;
+          --card:#f9fafb;
           --text:#111827;
           --muted:#6b7280;
           --border:#e5e7eb;
           --accent:#22c55e;
         }
         body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
-        .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;box-shadow:0 10px 28px rgba(0,0,0,.05);width:min(420px,92%)}
-        .title{margin:0 0 12px;font-weight:800;letter-spacing:.3px}
-        .muted{color:var(--muted);font-size:13px;margin-bottom:12px}
-        .row{display:flex;gap:8px}
-        input[type=text]{flex:1;border-radius:10px;border:1px solid var(--border);padding:10px;background:#fff}
-        .btn{border:0;border-radius:10px;padding:10px 16px;font-weight:700;color:#fff;background:var(--accent);cursor:pointer;box-shadow:0 6px 14px rgba(34,197,94,.22)}
+        .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;box-shadow:0 10px 28px rgba(0,0,0,.05);width:min(420px,92%)}
+        .title{margin:0 0 24px;font-weight:800;letter-spacing:.3px;text-align:center}
+        .form-label{font-weight:600;margin-bottom:8px}
+        .form-control{border-radius:10px;border:1px solid var(--border);padding:10px 12px;margin-bottom:16px}
+        .btn{border:0;border-radius:10px;padding:12px 16px;font-weight:700;color:#fff;background:var(--accent);cursor:pointer;box-shadow:0 6px 14px rgba(34,197,94,.22);width:100%}
         .btn:hover{filter:brightness(1.03)}
+        .alert{padding:12px;border-radius:10px;margin-bottom:16px;background:#fee2e2;border:1px solid #fecaca;color:#7f1d1d}
       </style>
     </head>
     <body>
       <div class="card">
-        <h2 class="title">Admin Access</h2>
-        <div class="muted">Append <code>?key=YOUR_KEY</code> in the URL or set <code>ADMIN_KEY</code> in environment.</div>
-        <div class="row">
-          <input type="text" value="?key=<?php echo htmlspecialchars($ADMIN_KEY); ?>" readonly onclick="this.select()">
-          <button class="btn" onclick="location.search='?key=<?php echo urlencode($ADMIN_KEY); ?>'">Enter</button>
-        </div>
+        <h2 class="title">Admin Login</h2>
+        <?php if (isset($loginError)): ?>
+          <div class="alert"><?= h($loginError) ?></div>
+        <?php endif; ?>
+        <form method="post">
+          <div>
+            <label class="form-label">Username</label>
+            <input type="text" name="username" class="form-control" required autofocus>
+          </div>
+          <div>
+            <label class="form-label">Password</label>
+            <input type="password" name="password" class="form-control" required>
+          </div>
+          <button type="submit" name="login" class="btn">Login</button>
+        </form>
       </div>
     </body>
     </html>
@@ -70,11 +104,9 @@ function human_size(int $bytes, int $decimals = 1): string {
     return number_format($value, $precision) . ' ' . $units[$pow];
 }
 function is_active_row(array $r): bool {
-    $now = new DateTime();
-    $exp = new DateTime($r['expires_at']);
-    $notExpired = $exp > $now;
+    // No expiration check anymore, only download limit
     $underLimit = ($r['max_downloads'] === null) || ((int)$r['downloads'] < (int)$r['max_downloads']);
-    return $notExpired && $underLimit;
+    return $underLimit;
 }
 function base_url(): string {
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
@@ -82,18 +114,16 @@ function base_url(): string {
 }
 
 /* ========= INPUTS ========= */
-$pdo = db();
-
-$q          = trim((string)($_GET['q'] ?? ''));     // search by file name only
-$status     = (string)($_GET['status'] ?? 'all');   // all|active|expired|limited
-$sort       = (string)($_GET['sort'] ?? 'id_desc'); // id_desc|id_asc|size_desc|size_asc|exp_asc|exp_desc|dl_desc|dl_asc|created_desc|created_asc
+$q          = trim((string)($_GET['q'] ?? ''));
+$status     = (string)($_GET['status'] ?? 'all');
+$sort       = (string)($_GET['sort'] ?? 'id_desc');
 $page       = max(1, (int)($_GET['page'] ?? 1));
 $perPage    = min(200, max(10, (int)($_GET['pp'] ?? 50)));
 
 $csrf = csrf_token();
 
 /* ========= ACTIONS (POST) ========= */
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['login'])) {
     $action = (string)($_POST['action'] ?? '');
     $token  = (string)($_POST['csrf_token'] ?? '');
     if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
@@ -113,12 +143,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'delete_expired') {
-        $pdo->prepare("DELETE FROM files WHERE expires_at < NOW()")->execute();
+        // Only delete files that have an expiration date set and are expired
+        $pdo->prepare("DELETE FROM files WHERE expires_at IS NOT NULL AND expires_at < datetime('now')")->execute();
         header('Location: '.$_SERVER['REQUEST_URI']); exit;
     }
 
     if ($action === 'export_csv') {
-        // Export current filter result as CSV (MIME removed)
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename=files_export_'.date('Ymd_His').'.csv');
         $out = fopen('php://output', 'w');
@@ -137,7 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $r['size'],
                 $r['downloads'],
                 $r['max_downloads'],
-                $r['expires_at'],
+                $r['expires_at'] ?? 'Never',
                 $r['created_at'] ?? '',
                 $statusTxt,
                 $link,
@@ -154,13 +184,13 @@ function buildWhere(string $q, string $status): array {
     $params = [];
 
     if ($q !== '') {
-        $where[] = "(orig_name LIKE :q)";     // MIME removed
+        $where[] = "(orig_name LIKE :q)";
         $params[':q'] = "%$q%";
     }
     if ($status === 'active') {
-        $where[] = "(expires_at > NOW()) AND (max_downloads IS NULL OR downloads < max_downloads)";
+        $where[] = "(max_downloads IS NULL OR downloads < max_downloads)";
     } elseif ($status === 'expired') {
-        $where[] = "(expires_at <= NOW())";
+        $where[] = "(expires_at IS NOT NULL AND expires_at <= datetime('now'))";
     } elseif ($status === 'limited') {
         $where[] = "(max_downloads IS NOT NULL AND downloads >= max_downloads)";
     }
@@ -195,8 +225,8 @@ $filteredCount = (int)$stmtCnt->fetchColumn();
 $sumSize = (int)$pdo->query("SELECT COALESCE(SUM(size),0) FROM files")->fetchColumn();
 $sumDownloads = (int)$pdo->query("SELECT COALESCE(SUM(downloads),0) FROM files")->fetchColumn();
 
-$activeCount = (int)$pdo->query("SELECT COUNT(*) FROM files WHERE expires_at > NOW() AND (max_downloads IS NULL OR downloads < max_downloads)")->fetchColumn();
-$expiredCount = (int)$pdo->query("SELECT COUNT(*) FROM files WHERE expires_at <= NOW()")->fetchColumn();
+$activeCount = (int)$pdo->query("SELECT COUNT(*) FROM files WHERE (max_downloads IS NULL OR downloads < max_downloads)")->fetchColumn();
+$expiredCount = (int)$pdo->query("SELECT COUNT(*) FROM files WHERE expires_at IS NOT NULL AND expires_at <= datetime('now')")->fetchColumn();
 $limitedCount = (int)$pdo->query("SELECT COUNT(*) FROM files WHERE max_downloads IS NOT NULL AND downloads >= max_downloads")->fetchColumn();
 
 // pagination
@@ -228,33 +258,34 @@ $qsBase = http_build_query([
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Admin — Files</title>
+<title>Admin Panel — File Transfer</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
   :root{
-    --bg:#f3f4f6;        /* light gray page background */
-    --card:#f9fafb;      /* soft gray cards */
-    --text:#111827;      /* dark text */
-    --muted:#6b7280;     /* muted text */
-    --border:#e5e7eb;    /* light borders */
-    --accent:#22c55e;    /* soft green */
-    --accent-50:#ecfdf5; /* badge green bg */
-    --danger-50:#fee2e2; /* badge red bg */
+    --bg:#f3f4f6;
+    --card:#f9fafb;
+    --text:#111827;
+    --muted:#6b7280;
+    --border:#e5e7eb;
+    --accent:#22c55e;
+    --accent-50:#ecfdf5;
+    --danger-50:#fee2e2;
   }
   body{ background:var(--bg); color:var(--text); padding:16px; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; }
   .wrap{ width:min(1220px,100%); margin:0 auto; }
+  .header-bar{
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;
+    background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px;
+    box-shadow:0 4px 12px rgba(0,0,0,.05);
+  }
+  .header-bar h1{ margin:0; font-size:24px; font-weight:800; }
+  .header-bar .admin-info{ display:flex; align-items:center; gap:12px; }
+  .header-bar .btn-logout{ padding:8px 16px; border-radius:8px; background:#ef4444; color:#fff; text-decoration:none; font-weight:600; }
+  .header-bar .btn-logout:hover{ background:#dc2626; }
+  
   .layout{ display:flex; gap:16px; }
   .main{ flex:1; min-width:0; }
-  .aside{ width:320px; }
-  .aside-sticky{ position:sticky; top:16px; }
-
-  .ad-slot{ background:#ffffff; border:1px solid var(--border); border-radius:14px; color:#374151; box-shadow:0 8px 20px rgba(0,0,0,.05); display:flex; align-items:center; justify-content:center; text-align:center; }
-  .ad-top{ height:90px; margin-bottom:14px; }
-  .ad-right{ height:600px; }
-  .ad-bottom{ height:250px; margin-top:16px; }
-  .ad-title{ font-weight:700; color:#111827; }
-  .ad-sub{ font-size:12px; color:#6b7280; }
 
   .panel{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:0 10px 26px rgba(0,0,0,.05); }
   .stat{ background:#f3f4f6; border:1px solid var(--border); border-radius:12px; padding:10px 12px; }
@@ -262,7 +293,7 @@ $qsBase = http_build_query([
   .muted{ color:var(--muted); }
 
   table.table{ background:#fff; color:#111; border-radius:12px; overflow:hidden; }
-  thead.table-light th{ background:#f3f4f6 !important; } /* subtle gray header */
+  thead.table-light th{ background:#f3f4f6 !important; }
   table.table th{ white-space:nowrap; }
   .status-badge{ border-radius:999px; padding:.2rem .5rem; font-size:.8rem; }
   .status-active{ background:var(--accent-50); color:#0b7a14; }
@@ -272,13 +303,18 @@ $qsBase = http_build_query([
   .btn-pill{ border-radius:999px; }
   .btn{ box-shadow:none; }
   .btn-light{ border:1px solid var(--border); background:#fff; }
-  .btn-outline-light{ border-color:var(--border); color:#374151; background:#fff; }
-  .btn-outline-primary{ border-color:#93c5fd; color:#1d4ed8; background:#fff; }
 </style>
 </head>
 <body>
 
-
+<div class="wrap">
+  <div class="header-bar">
+    <h1>Admin Panel</h1>
+    <div class="admin-info">
+      <span>Welcome, <strong><?= h($_SESSION['admin_username']) ?></strong></span>
+      <a href="?logout" class="btn-logout">Logout</a>
+    </div>
+  </div>
 
   <div class="layout">
     <div class="main">
@@ -376,7 +412,7 @@ $qsBase = http_build_query([
                   <td class="text-truncate" style="max-width:260px" title="<?= h($r['orig_name']) ?>"><?= h($r['orig_name']) ?></td>
                   <td><?= human_size((int)$r['size']) ?></td>
                   <td><?= (int)$r['downloads'] ?><?= $r['max_downloads'] ? ' / '.(int)$r['max_downloads'] : '' ?></td>
-                  <td><span title="<?= h($r['expires_at']) ?>"><?= h($r['expires_at']) ?></span></td>
+                  <td><span title="<?= h($r['expires_at'] ?? 'Never') ?>"><?= h($r['expires_at'] ?? 'Never') ?></span></td>
                   <td><?= h($r['created_at'] ?? '') ?></td>
                   <td><span class="status-badge <?= $badgeClass ?>"><?= $badgeText ?></span></td>
                   <td>
@@ -416,7 +452,9 @@ $qsBase = http_build_query([
         <?php endif; ?>
 
       </form>
-
+    </div>
+  </div>
+</div>
 
 <script>
 function copyLink(link, btn){

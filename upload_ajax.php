@@ -60,9 +60,8 @@ if (!move_uploaded_file($tmp, $dest)) {
     echo json_encode(['ok'=>false,'error'=>'Failed to save file (check permissions on storage/)']); exit;
 }
 
-// inputs
-$expire_days   = max(1, min(30, (int)($_POST['expire_days'] ?? 3)));
-$expires_at    = (new DateTime())->modify("+{$expire_days} days")->format('Y-m-d H:i:s');
+// inputs - no expiration date (set to NULL)
+$expires_at    = null;
 $max_downloads = isset($_POST['max_downloads']) && $_POST['max_downloads'] !== '' ? (int)$_POST['max_downloads'] : null;
 
 // DB insert

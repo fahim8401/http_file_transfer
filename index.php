@@ -215,7 +215,7 @@ $csrf = csrf_token();
 
         <div class="error" id="errorBox">Error</div>
 
-        <div class="footer">Files auto-expire after 3 days. Download link is private.</div>
+        <div class="footer">Download link is public.</div>
       </div>
     </div>
 
