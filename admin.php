@@ -59,8 +59,34 @@ if (!$isLoggedIn) {
           --border:#e5e7eb;
           --accent:#22c55e;
         }
-        body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
-        .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;box-shadow:0 10px 28px rgba(0,0,0,.05);width:min(420px,92%)}
+        body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text);padding:16px}
+        .wrap{width:min(500px,100%)}
+        .navbar{
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 16px;
+          padding: 14px 20px;
+          margin-bottom: 20px;
+          box-shadow: 0 8px 24px rgba(0,0,0,.15);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 12px;
+        }
+        .navbar-brand{
+          font-size: 22px;
+          font-weight: 800;
+          color: #fff;
+          text-decoration: none;
+          letter-spacing: 0.5px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .navbar-brand:hover{
+          color: #fff;
+          text-decoration: none;
+        }
+        .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;box-shadow:0 10px 28px rgba(0,0,0,.05);width:100%}
         .title{margin:0 0 24px;font-weight:800;letter-spacing:.3px;text-align:center}
         .form-label{font-weight:600;margin-bottom:8px}
         .form-control{border-radius:10px;border:1px solid var(--border);padding:10px 12px;margin-bottom:16px}
@@ -70,7 +96,13 @@ if (!$isLoggedIn) {
       </style>
     </head>
     <body>
-      <div class="card">
+      <div class="wrap">
+        <nav class="navbar">
+          <a href="index.php" class="navbar-brand">
+            <span>📁</span> File Transfer
+          </a>
+        </nav>
+        <div class="card">
         <h2 class="title">Admin Login</h2>
         <?php if (isset($loginError)): ?>
           <div class="alert"><?= h($loginError) ?></div>
@@ -86,6 +118,7 @@ if (!$isLoggedIn) {
           </div>
           <button type="submit" name="login" class="btn">Login</button>
         </form>
+      </div>
       </div>
     </body>
     </html>
@@ -303,11 +336,88 @@ $qsBase = http_build_query([
   .btn-pill{ border-radius:999px; }
   .btn{ box-shadow:none; }
   .btn-light{ border:1px solid var(--border); background:#fff; }
+
+  /* ===== Navigation Bar ===== */
+  .navbar{
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .navbar-brand{
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    text-decoration: none;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .navbar-brand:hover{
+    color: #fff;
+    text-decoration: none;
+  }
+  .navbar-nav{
+    display: flex;
+    gap: 8px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    flex-wrap: wrap;
+  }
+  .nav-link{
+    color: rgba(255,255,255,0.9);
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .nav-link:hover{
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+    transform: translateY(-1px);
+  }
+  .nav-link.active{
+    background: rgba(255,255,255,0.3);
+    color: #fff;
+  }
+  @media (max-width: 768px){
+    .navbar{
+      flex-direction: column;
+      text-align: center;
+    }
+    .navbar-nav{
+      width: 100%;
+      justify-content: center;
+    }
+  }
 </style>
 </head>
 <body>
 
 <div class="wrap">
+  <!-- ===== Navigation Bar ===== -->
+  <nav class="navbar">
+    <a href="index.php" class="navbar-brand">
+      <span>📁</span> File Transfer
+    </a>
+    <ul class="navbar-nav">
+      <li><a href="index.php" class="nav-link">Upload</a></li>
+      <li><a href="admin.php" class="nav-link active">Admin Panel</a></li>
+    </ul>
+  </nav>
+
   <div class="header-bar">
     <h1>Admin Panel</h1>
     <div class="admin-info">

@@ -190,11 +190,88 @@ if (!empty($file) && $file['max_downloads'] !== null) {
       .sharebox{ flex-direction:column; }
       .sharebox .btn{ width:100%; }
     }
+
+  /* ===== Navigation Bar ===== */
+  .navbar{
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .navbar-brand{
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    text-decoration: none;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .navbar-brand:hover{
+    color: #fff;
+    text-decoration: none;
+  }
+  .navbar-nav{
+    display: flex;
+    gap: 8px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    flex-wrap: wrap;
+  }
+  .nav-link{
+    color: rgba(255,255,255,0.9);
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .nav-link:hover{
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+    transform: translateY(-1px);
+  }
+  .nav-link.active{
+    background: rgba(255,255,255,0.3);
+    color: #fff;
+  }
+  @media (max-width: 768px){
+    .navbar{
+      flex-direction: column;
+      text-align: center;
+    }
+    .navbar-nav{
+      width: 100%;
+      justify-content: center;
+    }
+  }
   </style>
 </head>
 <body>
 
 <div class="wrap">
+
+  <!-- ===== Navigation Bar ===== -->
+  <nav class="navbar">
+    <a href="index.php" class="navbar-brand">
+      <span>📁</span> File Transfer
+    </a>
+    <ul class="navbar-nav">
+      <li><a href="index.php" class="nav-link">Upload</a></li>
+      <li><a href="admin.php" class="nav-link">Admin Panel</a></li>
+    </ul>
+  </nav>
 
   <!-- ===== Top Banner Ad Slot ===== -->
   <div class="ad-slot ad-top" id="adTop">

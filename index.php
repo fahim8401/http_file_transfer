@@ -168,6 +168,62 @@ function human_size(int $bytes): string {
   /* tiny footer */
   .footer{ margin-top:14px; text-align:center; font-size:12px; color:var(--muted); }
 
+  /* ===== Navigation Bar ===== */
+  .navbar{
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .navbar-brand{
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    text-decoration: none;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .navbar-brand:hover{
+    color: #fff;
+    text-decoration: none;
+  }
+  .navbar-nav{
+    display: flex;
+    gap: 8px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    flex-wrap: wrap;
+  }
+  .nav-link{
+    color: rgba(255,255,255,0.9);
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .nav-link:hover{
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+    transform: translateY(-1px);
+  }
+  .nav-link.active{
+    background: rgba(255,255,255,0.3);
+    color: #fff;
+  }
+
   /* ===== Responsive: aside stacks under main on small screens ===== */
   @media (max-width: 992px){
     .layout{ flex-direction: column; }
@@ -175,11 +231,32 @@ function human_size(int $bytes): string {
     .aside-sticky{ position: static; }
     .ad-right{ height:250px; } /* smaller creative on mobile */
   }
+  @media (max-width: 768px){
+    .navbar{
+      flex-direction: column;
+      text-align: center;
+    }
+    .navbar-nav{
+      width: 100%;
+      justify-content: center;
+    }
+  }
 </style>
 </head>
 <body>
 
 <div class="wrap">
+
+  <!-- ===== Navigation Bar ===== -->
+  <nav class="navbar">
+    <a href="index.php" class="navbar-brand">
+      <span>📁</span> File Transfer
+    </a>
+    <ul class="navbar-nav">
+      <li><a href="index.php" class="nav-link active">Upload</a></li>
+      <li><a href="admin.php" class="nav-link">Admin Panel</a></li>
+    </ul>
+  </nav>
 
   <!-- ===== Top Banner Ad (Image) ===== -->
   <div class="ad-slot ad-top" id="adTop">
@@ -199,8 +276,8 @@ function human_size(int $bytes): string {
     <!-- Left: uploader panel -->
     <div class="main">
       <div class="panel">
-        <div class="subtle" id="connMsg">CONNECTION ESTABLISHED… &nbsp; SERVER FOUND…</div>
-        <h1 class="title" id="phaseTitle">UPLOADING</h1>
+        <div class="subtle" id="connMsg">Secure File Sharing • Fast Upload • Easy Download</div>
+        <h1 class="title" id="phaseTitle">Upload Files</h1>
 
         <!-- Picker -->
         <div class="picker">
@@ -365,7 +442,7 @@ function human_size(int $bytes): string {
     barFill.style.width = '0%';
     pctTxt.textContent = '0%';
     speedEta.textContent = 'SPEED: –  •  ETA: –';
-    phaseTitle.textContent = 'UPLOADING';
+    phaseTitle.textContent = 'Uploading...';
     btnUpload.disabled = true;
     btnCancel.style.display = '';
 
@@ -402,17 +479,17 @@ function human_size(int $bytes): string {
       if (xhr.status===200 && xhr.response && xhr.response.ok){
         barFill.style.width = '100%';
         pctTxt.textContent = '100%';
-        phaseTitle.textContent = 'UPLOAD COMPLETE';
+        phaseTitle.textContent = 'Upload Complete ✓';
         shareLink.value = xhr.response.link || '';
         result.classList.remove('hidden');
       } else {
         const msg = (xhr.response && xhr.response.error) ? xhr.response.error : ('Server error ('+xhr.status+')');
         error(msg);
-        phaseTitle.textContent = 'UPLOAD FAILED';
+        phaseTitle.textContent = 'Upload Failed ✗';
       }
     };
-    xhr.onerror = ()=>{ btnUpload.disabled=false; btnCancel.style.display='none'; error('Network error.'); phaseTitle.textContent='UPLOAD FAILED'; };
-    xhr.onabort  = ()=>{ btnUpload.disabled=false; btnCancel.style.display='none'; error('Upload canceled.'); phaseTitle.textContent='CANCELED'; };
+    xhr.onerror = ()=>{ btnUpload.disabled=false; btnCancel.style.display='none'; error('Network error.'); phaseTitle.textContent='Upload Failed ✗'; };
+    xhr.onabort  = ()=>{ btnUpload.disabled=false; btnCancel.style.display='none'; error('Upload canceled.'); phaseTitle.textContent='Canceled'; };
 
     xhr.send(fd);
   });
