@@ -1,6 +1,85 @@
-php_value upload_max_filesize 0
-php_value post_max_size 0
-php_value max_execution_time 0
-php_value max_input_time 0
-php_value memory_limit -1
-LimitRequestBody 0
+# HTTP File Transfer - cPanel Compatible Configuration
+
+# ===== PHP Settings for Large File Uploads =====
+# Note: Some settings may require server permission to override
+# If these don't work on your cPanel, adjust in php.ini or MultiPHP INI Editor
+
+<IfModule mod_php7.c>
+php_value upload_max_filesize 2048M
+php_value post_max_size 2048M
+php_value max_execution_time 600
+php_value max_input_time 600
+php_value memory_limit 512M
+</IfModule>
+
+<IfModule mod_php8.c>
+php_value upload_max_filesize 2048M
+php_value post_max_size 2048M
+php_value max_execution_time 600
+php_value max_input_time 600
+php_value memory_limit 512M
+</IfModule>
+
+# ===== Alternative for PHP-FPM (FastCGI) - cPanel default =====
+# If above doesn't work, use MultiPHP INI Editor in cPanel or create php.ini
+
+# ===== Security Headers =====
+<IfModule mod_headers.c>
+    # Prevent clickjacking
+    Header always set X-Frame-Options "SAMEORIGIN"
+    
+    # XSS Protection
+    Header always set X-XSS-Protection "1; mode=block"
+    
+    # Prevent MIME-type sniffing
+    Header always set X-Content-Type-Options "nosniff"
+    
+    # Referrer Policy
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# ===== Directory Index =====
+DirectoryIndex index.php index.html
+
+# ===== Prevent Directory Browsing =====
+Options -Indexes
+
+# ===== Protect Sensitive Files =====
+<FilesMatch "^(db\.php|helpers\.php|config\.php|\.htaccess|\.git.*|filetransfer\.db|\.env)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# ===== Protect Database File =====
+<Files "filetransfer.db">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# ===== Protect Storage Directory from Direct Access =====
+# Files should only be downloaded through dl.php
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^storage/.*$ - [F,L]
+</IfModule>
+
+# ===== Error Pages (Optional) =====
+# Uncomment to use custom error pages
+# ErrorDocument 404 /404.php
+# ErrorDocument 500 /500.php
+
+# ===== Compression (Optional - improves performance) =====
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# ===== Browser Caching (Optional - improves performance) =====
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+</IfModule>
